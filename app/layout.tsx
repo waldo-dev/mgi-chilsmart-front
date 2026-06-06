@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chilsmart — Dashboards",
-  description: "Plataforma de dashboards Power BI",
+  title: "Chilsmart — MGI Asesorías",
+  description: "Plataforma de dashboards Power BI — Chilsmart",
 };
 
 export default function RootLayout({

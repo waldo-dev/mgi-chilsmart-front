@@ -1,21 +1,18 @@
 "use client";
 
+import { DualBrandLogos } from "@/components/DualBrandLogos";
 import { useAuth } from "@/context/AuthContext";
 import { ApiClientError } from "@/lib/api";
+import { resolvePrimary, PLATFORM_PRIMARY } from "@/lib/branding";
 import {
   checkLoginRateLimit,
   clearLoginFailures,
   getSafeRedirectPath,
-  isSafeBrandColor,
   recordLoginFailure,
   sanitizeLoginError,
 } from "@/lib/security";
-import { SafeExternalImage } from "@/components/SafeExternalImage";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState, type CSSProperties } from "react";
-
-const CHILSMART_PRIMARY = "#0099ff";
 
 export default function LoginPage() {
   const { login, token, loading, empresa } = useAuth();
@@ -59,12 +56,9 @@ export default function LoginPage() {
     }
   }
 
-  const primary =
-    empresa?.colorPrimario && isSafeBrandColor(empresa.colorPrimario)
-      ? empresa.colorPrimario
-      : CHILSMART_PRIMARY;
-  const clientLogo = empresa?.logoUrl;
-  const clientName = empresa?.nombreEmpresa;
+  const primary = empresa?.colorPrimario
+    ? resolvePrimary(empresa.colorPrimario)
+    : PLATFORM_PRIMARY;
 
   if (loading) {
     return (
@@ -79,28 +73,8 @@ export default function LoginPage() {
       className="flex min-h-screen items-center justify-center bg-white px-4 py-12"
       style={{ "--brand": primary } as CSSProperties}
     >
-      <div className="flex w-full max-w-[420px] flex-col items-center">
-        {clientLogo ? (
-          <div className="mb-8 flex flex-col items-center gap-2">
-            <SafeExternalImage
-              src={clientLogo}
-              alt={clientName ?? "Empresa"}
-              className="h-12 w-auto max-w-[200px] object-contain"
-            />
-            {clientName ? (
-              <p className="text-sm text-zinc-500">{clientName}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        <Image
-          src="/logo-chilsmart.png"
-          alt="Chilsmart"
-          width={320}
-          height={96}
-          priority
-          className="h-auto w-[min(100%,300px)]"
-        />
+      <div className="flex w-full max-w-[480px] flex-col items-center">
+        <DualBrandLogos priority variant="login" />
 
         <h1 className="mt-10 text-center text-xl font-semibold text-zinc-900">
           Iniciar sesión

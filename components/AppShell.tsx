@@ -1,15 +1,12 @@
 "use client";
 
+import { DualBrandLogos } from "@/components/DualBrandLogos";
 import { useAuth } from "@/context/AuthContext";
 import { isAdmin, isSuperadmin } from "@/lib/api";
-import { isSafeBrandColor } from "@/lib/security";
-import { SafeExternalImage } from "@/components/SafeExternalImage";
+import { resolveClientName, resolvePrimary, resolveSecondary } from "@/lib/branding";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-
-const CHILSMART_PRIMARY = "#0099ff";
-const CHILSMART_SECONDARY = "#0066cc";
 
 const navLinkBase =
   "block rounded-lg px-3 py-2 text-sm font-medium transition-colors";
@@ -27,14 +24,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const primary =
-    empresa?.colorPrimario && isSafeBrandColor(empresa.colorPrimario)
-      ? empresa.colorPrimario
-      : CHILSMART_PRIMARY;
-  const secondary =
-    empresa?.colorSecundario && isSafeBrandColor(empresa.colorSecundario)
-      ? empresa.colorSecundario
-      : CHILSMART_SECONDARY;
+  const primary = resolvePrimary(empresa?.colorPrimario);
+  const secondary = resolveSecondary(empresa?.colorSecundario);
+  const clientName = resolveClientName(empresa?.nombreEmpresa);
 
   const navItems = [
     { href: "/dashboards", label: "Dashboards", show: true },
@@ -104,25 +96,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           background: `linear-gradient(135deg, ${primary}, ${secondary})`,
         }}
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-6">
           <Link
             href="/dashboards"
-            className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90"
+            className="flex min-w-0 flex-1 items-center gap-2 transition-opacity hover:opacity-90 sm:gap-3 lg:flex-initial"
           >
-            {empresa?.logoUrl ? (
-              <SafeExternalImage
-                src={empresa.logoUrl}
-                alt={empresa.nombreEmpresa}
-                className="h-8 w-auto max-w-[100px] shrink-0 object-contain sm:h-9 sm:max-w-[120px]"
-              />
-            ) : (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold sm:h-9 sm:w-9">
-                {(empresa?.nombreEmpresa ?? "C").charAt(0)}
-              </span>
-            )}
-            <div className="min-w-0">
+            <DualBrandLogos variant="header" />
+            <div className="min-w-0 hidden sm:block">
               <p className="truncate text-sm font-semibold leading-tight sm:text-base">
-                {empresa?.nombreEmpresa ?? "Chilsmart"}
+                {clientName}
               </p>
               {usuario ? (
                 <p className="hidden truncate text-xs text-white/70 sm:block">
