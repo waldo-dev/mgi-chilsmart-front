@@ -1,0 +1,32 @@
+# Solo levanta el frontend Next.js. La API y la DB se configuran vía .env (sin backend en este compose).
+services:
+  front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_HIDE_PBI_LICENSE_BANNER: ${NEXT_PUBLIC_HIDE_PBI_LICENSE_BANNER:-}
+        NEXT_PUBLIC_PBI_EMBED_BACKGROUND: ${NEXT_PUBLIC_PBI_EMBED_BACKGROUND:-}
+    container_name: chilsmart-front
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3088}:${PORT:-3088}"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3088}
+      HOSTNAME: "0.0.0.0"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||'3088')).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
