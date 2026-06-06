@@ -2,96 +2,283 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { isAdmin, isSuperadmin } from "@/lib/api";
+import { isSafeBrandColor } from "@/lib/security";
+import { SafeExternalImage } from "@/components/SafeExternalImage";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-const navLink =
-  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-white/10";
+const CHILSMART_PRIMARY = "#0099ff";
+const CHILSMART_SECONDARY = "#0066cc";
+
+const navLinkBase =
+  "block rounded-lg px-3 py-2 text-sm font-medium transition-colors";
+
+function formatRol(rol: string) {
+  if (rol === "superadmin") return "Superadmin";
+  if (rol === "admin_partner") return "Partner";
+  if (rol === "admin_cliente") return "Administrador";
+  if (rol === "lector") return "Lector";
+  return rol;
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { usuario, empresa, logout } = useAuth();
   const pathname = usePathname();
-  const primary = empresa?.colorPrimario ?? "#1e3a5f";
-  const secondary = empresa?.colorSecundario ?? "#2563eb";
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const linkClass = (href: string) =>
-    `${navLink} ${pathname.startsWith(href) ? "bg-white/15" : "text-white/80"}`;
+  const primary =
+    empresa?.colorPrimario && isSafeBrandColor(empresa.colorPrimario)
+      ? empresa.colorPrimario
+      : CHILSMART_PRIMARY;
+  const secondary =
+    empresa?.colorSecundario && isSafeBrandColor(empresa.colorSecundario)
+      ? empresa.colorSecundario
+      : CHILSMART_SECONDARY;
+
+  const navItems = [
+    { href: "/dashboards", label: "Dashboards", show: true },
+    {
+      href: "/admin/clientes",
+      label: "Organizaciones",
+      show: Boolean(usuario && isSuperadmin(usuario.rol)),
+    },
+    {
+      href: "/admin/usuarios",
+      label: "Usuarios",
+      show: Boolean(usuario && isAdmin(usuario.rol)),
+    },
+    {
+      href: "/admin/accesos",
+      label: "Accesos",
+      show: Boolean(usuario && isAdmin(usuario.rol)),
+    },
+    {
+      href: "/admin/auditoria",
+      label: "Auditoría",
+      show: Boolean(usuario && isAdmin(usuario.rol)),
+    },
+    { href: "/perfil", label: "Mi perfil", show: Boolean(usuario) },
+  ].filter((item) => item.show);
+
+  const linkClass = (href: string, mobile = false) => {
+    const active = pathname.startsWith(href);
+    if (mobile) {
+      return `${navLinkBase} ${
+        active
+          ? "bg-white/15 text-white"
+          : "text-white/85 hover:bg-white/10 hover:text-white"
+      }`;
+    }
+    return `${navLinkBase} ${
+      active
+        ? "bg-white/20 text-white shadow-sm"
+        : "text-white/85 hover:bg-white/10 hover:text-white"
+    }`;
+  };
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    await logout();
+  }
+
+  const userInitial =
+    usuario?.nombreCompleto?.charAt(0)?.toUpperCase() ?? "?";
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50">
+    <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900">
       <header
-        className="text-white shadow-md"
+        className="sticky top-0 z-40 text-white shadow-md"
         style={{
           background: `linear-gradient(135deg, ${primary}, ${secondary})`,
         }}
       >
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+          <Link
+            href="/dashboards"
+            className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90"
+          >
             {empresa?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <SafeExternalImage
                 src={empresa.logoUrl}
                 alt={empresa.nombreEmpresa}
-                className="h-9 w-auto max-w-[120px] object-contain"
+                className="h-8 w-auto max-w-[100px] shrink-0 object-contain sm:h-9 sm:max-w-[120px]"
               />
-            ) : null}
-            <div>
-              <p className="text-lg font-semibold leading-tight">
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold sm:h-9 sm:w-9">
+                {(empresa?.nombreEmpresa ?? "C").charAt(0)}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight sm:text-base">
                 {empresa?.nombreEmpresa ?? "Chilsmart"}
               </p>
               {usuario ? (
-                <p className="text-xs text-white/70">
-                  {usuario.nombreCompleto} · {usuario.rol}
+                <p className="hidden truncate text-xs text-white/70 sm:block">
+                  {usuario.nombreCompleto}
                 </p>
               ) : null}
             </div>
-          </div>
-          <nav className="flex flex-wrap items-center gap-1">
-            <Link href="/dashboards" className={linkClass("/dashboards")}>
-              Dashboards
-            </Link>
-            {usuario && isSuperadmin(usuario.rol) ? (
+          </Link>
+
+          <nav
+            className="hidden items-center gap-1 lg:flex"
+            aria-label="Navegación principal"
+          >
+            {navItems.map((item) => (
               <Link
-                href="/admin/clientes"
-                className={linkClass("/admin/clientes")}
+                key={item.href}
+                href={item.href}
+                className={linkClass(item.href)}
               >
-                Empresas
+                {item.label}
               </Link>
-            ) : null}
-            {usuario && isAdmin(usuario.rol) ? (
-              <>
-                <Link
-                  href="/admin/usuarios"
-                  className={linkClass("/admin/usuarios")}
-                >
-                  Usuarios
-                </Link>
-                <Link
-                  href="/admin/accesos"
-                  className={linkClass("/admin/accesos")}
-                >
-                  Accesos
-                </Link>
-                <Link
-                  href="/admin/auditoria"
-                  className={linkClass("/admin/auditoria")}
-                >
-                  Auditoría
-                </Link>
-              </>
+            ))}
+          </nav>
+
+          <div className="hidden items-center gap-3 lg:flex">
+            {usuario ? (
+              <Link
+                href="/perfil"
+                className="flex items-center gap-2 rounded-lg bg-white/10 px-2 py-1 transition-colors hover:bg-white/15"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                  {userInitial}
+                </span>
+                <div className="pr-1 text-right">
+                  <p className="max-w-[140px] truncate text-xs font-medium leading-tight">
+                    {usuario.nombreCompleto}
+                  </p>
+                  <p className="text-[11px] text-white/70">
+                    {formatRol(usuario.rol)}
+                  </p>
+                </div>
+              </Link>
             ) : null}
             <button
               type="button"
-              onClick={logout}
-              className={`${navLink} text-white/80`}
+              onClick={handleLogout}
+              className={`${navLinkBase} text-white/85 hover:bg-white/10 hover:text-white`}
             >
               Salir
             </button>
-          </nav>
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/90 transition-colors hover:bg-white/10 lg:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? (
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+
+      {menuOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          aria-label="Cerrar menú"
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      <aside
+        id="mobile-nav"
+        className={`fixed inset-y-0 right-0 z-40 flex w-[min(100%,280px)] flex-col shadow-xl transition-transform duration-200 ease-out lg:hidden ${
+          menuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{
+          background: `linear-gradient(180deg, ${primary}, ${secondary})`,
+        }}
+        aria-hidden={!menuOpen}
+      >
+        {usuario ? (
+          <div className="flex items-center gap-3 border-b border-white/15 px-5 py-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-semibold">
+              {userInitial}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {usuario.nombreCompleto}
+              </p>
+              <p className="text-xs text-white/70">{formatRol(usuario.rol)}</p>
+            </div>
+          </div>
+        ) : null}
+
+        <nav
+          className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
+          aria-label="Navegación móvil"
+        >
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={linkClass(item.href, true)}
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="border-t border-white/15 p-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`${navLinkBase} w-full text-left text-white/85 hover:bg-white/10 hover:text-white`}
+          >
+            Salir
+          </button>
+        </div>
+      </aside>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 text-zinc-900 sm:px-6 sm:py-8">
         {children}
       </main>
     </div>

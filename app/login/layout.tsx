@@ -5,5 +5,15 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <Suspense fallback={<p className="p-8 text-center">Cargando…</p>}>{children}</Suspense>;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-white">
+          <p className="text-sm text-zinc-500">Cargando…</p>
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
 }

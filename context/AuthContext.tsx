@@ -11,7 +11,11 @@ import {
   type ReactNode,
 } from "react";
 import { authApi, ApiClientError } from "@/lib/api";
-import type { AuthResponse, Empresa, Usuario } from "@/lib/types";
+import {
+  isSafeBrandColor,
+  isValidStoredAuth,
+} from "@/lib/security";
+import type { Empresa, Usuario } from "@/lib/types";
 
 const STORAGE_KEY = "chilsmart_auth";
 
@@ -26,8 +30,9 @@ interface AuthContextValue {
   usuario: Usuario | null;
   empresa: Empresa | null;
   loading: boolean;
+  sessionValidated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -38,10 +43,14 @@ function loadStored(): StoredAuth | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredAuth;
-    if (!parsed?.token) return null;
-    return parsed;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isValidStoredAuth(parsed)) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed as StoredAuth;
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     return null;
   }
 }
@@ -57,12 +66,12 @@ function saveStored(data: StoredAuth | null) {
 
 function applyBranding(empresa: Empresa | null) {
   const root = document.documentElement;
-  if (empresa?.colorPrimario) {
+  if (empresa?.colorPrimario && isSafeBrandColor(empresa.colorPrimario)) {
     root.style.setProperty("--brand-primary", empresa.colorPrimario);
   } else {
     root.style.removeProperty("--brand-primary");
   }
-  if (empresa?.colorSecundario) {
+  if (empresa?.colorSecundario && isSafeBrandColor(empresa.colorSecundario)) {
     root.style.setProperty("--brand-secondary", empresa.colorSecundario);
   } else {
     root.style.removeProperty("--brand-secondary");
@@ -74,10 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionValidated, setSessionValidated] = useState(false);
   const validateGen = useRef(0);
 
   const setSession = useCallback((data: StoredAuth | null) => {
     if (data) {
+      if (data.usuario.activo === false) {
+        setToken(null);
+        setUsuario(null);
+        setEmpresa(null);
+        saveStored(null);
+        applyBranding(null);
+        return;
+      }
       setToken(data.token);
       setUsuario(data.usuario);
       setEmpresa(data.empresa);
@@ -97,17 +115,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const gen = ++validateGen.current;
       try {
         const data = await authApi.me(sessionToken);
-        if (gen !== validateGen.current) return;
+        if (gen !== validateGen.current) return false;
+        if (data.usuario.activo === false) {
+          setSession(null);
+          return false;
+        }
         setSession({
           token: sessionToken,
           usuario: data.usuario,
           empresa: data.empresa,
         });
+        return true;
       } catch (err) {
-        if (gen !== validateGen.current) return;
+        if (gen !== validateGen.current) return false;
         if (err instanceof ApiClientError && err.status === 401) {
           setSession(null);
         }
+        return false;
       }
     },
     [setSession],
@@ -117,48 +141,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = loadStored();
     if (!stored?.token) {
       setSession(null);
+      setSessionValidated(true);
       setLoading(false);
       return;
     }
-    setSession(stored);
-    setLoading(false);
+    setLoading(true);
     await validateToken(stored.token);
+    setSessionValidated(true);
+    setLoading(false);
   }, [setSession, validateToken]);
 
   useEffect(() => {
     const stored = loadStored();
     if (!stored) {
+      setSessionValidated(true);
       setLoading(false);
       return;
     }
-    setSession(stored);
-    setLoading(false);
-    validateToken(stored.token);
-  }, [setSession, validateToken]);
+    validateToken(stored.token).finally(() => {
+      setSessionValidated(true);
+      setLoading(false);
+    });
+  }, [validateToken]);
 
   const login = useCallback(
     async (email: string, password: string) => {
       const data = await authApi.login(email, password);
       validateGen.current += 1;
+      if (data.usuario.activo === false) {
+        throw new ApiClientError("Tu cuenta está desactivada", 403);
+      }
       setSession({
         token: data.token,
         usuario: data.usuario,
         empresa: data.empresa,
       });
+      setSessionValidated(true);
       setLoading(false);
     },
     [setSession],
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     validateGen.current += 1;
+    const sessionToken = token ?? loadStored()?.token ?? null;
+
+    if (sessionToken) {
+      try {
+        await authApi.logout(sessionToken);
+      } catch {
+        /* Siempre limpiamos la sesión local aunque falle la revocación */
+      }
+    }
+
     setSession(null);
+    setSessionValidated(true);
     setLoading(false);
-  }, [setSession]);
+  }, [setSession, token]);
 
   const value = useMemo(
-    () => ({ token, usuario, empresa, loading, login, logout, refresh }),
-    [token, usuario, empresa, loading, login, logout, refresh],
+    () => ({
+      token,
+      usuario,
+      empresa,
+      loading,
+      sessionValidated,
+      login,
+      logout,
+      refresh,
+    }),
+    [token, usuario, empresa, loading, sessionValidated, login, logout, refresh],
   );
 
   return (

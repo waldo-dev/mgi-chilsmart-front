@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #18181b;
 }
 
 @theme inline {
@@ -12,15 +13,115 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  button:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input[type="button"]:disabled,
+  input[type="submit"]:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  .ui-page-title {
+    @apply text-2xl font-bold text-zinc-900;
+  }
+
+  .ui-page-desc {
+    @apply mt-1 text-sm text-zinc-600;
+  }
+
+  .ui-section-title {
+    @apply text-base font-semibold text-zinc-900;
+  }
+
+  .ui-muted {
+    @apply text-sm text-zinc-600;
+  }
+
+  .ui-meta {
+    @apply text-xs text-zinc-500;
+  }
+
+  .ui-card {
+    @apply rounded-xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm;
+  }
+
+  .ui-label {
+    @apply block text-sm font-medium text-zinc-800;
+  }
+
+  .ui-input,
+  .ui-select {
+    @apply rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-500;
+  }
+
+  .ui-btn-primary {
+    @apply cursor-pointer rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-btn-secondary {
+    @apply cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-btn-danger {
+    @apply cursor-pointer rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-800 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-btn-accent {
+    @apply cursor-pointer rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-list-row {
+    @apply rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-zinc-900;
+  }
+
+  .ui-alert-error {
+    @apply rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800;
+  }
+
+  .ui-alert-warn {
+    @apply rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950;
+  }
+
+  .ui-alert-info {
+    @apply rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900;
+  }
+}
+
+@media print {
+  header[class*="sticky"],
+  #mobile-nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .ui-card,
+  table {
+    break-inside: avoid;
+  }
 }

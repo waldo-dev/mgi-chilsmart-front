@@ -1,4 +1,6 @@
-export type Rol = "lector" | "admin_cliente" | "superadmin";
+export type Rol = "lector" | "admin_cliente" | "admin_partner" | "superadmin";
+
+export type TipoOrganizacion = "plataforma" | "partner" | "empresa";
 
 export interface Usuario {
   id: string;
@@ -51,13 +53,17 @@ export interface UsuarioAdmin {
   nombreCompleto: string;
   rol: Rol;
   activo: boolean;
+  clienteId?: string;
+  nombreEmpresa?: string;
 }
 
 export interface CrearUsuarioBody {
   email: string;
   password: string;
   nombre_completo: string;
-  rol: "lector" | "admin_cliente";
+  rol: "lector" | "admin_cliente" | "admin_partner";
+  /** Obligatorio para superadmin y admin_partner; inferido del token para admin_cliente */
+  cliente_id?: string;
 }
 
 export interface ActualizarUsuarioBody {
@@ -66,12 +72,35 @@ export interface ActualizarUsuarioBody {
   activo?: boolean;
 }
 
+export interface PaginatedUsuariosResponse {
+  usuarios: UsuarioAdmin[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ActualizarPerfilBody {
+  nombre_completo: string;
+}
+
+export interface CambiarPasswordBody {
+  password_actual: string;
+  password_nuevo: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
 export interface AuditoriaEntry {
   id: string;
   accion: string;
   direccionIp: string;
   agenteUsuario: string;
   creadoEn: string;
+  clienteId?: string;
+  nombreEmpresa?: string;
   usuario: {
     id: string;
     email: string;
@@ -106,6 +135,31 @@ export interface Cliente {
   nombreEmpresa: string;
   slugUrl: string;
   powerbiWorkspaceId?: string | null;
+  tipo?: TipoOrganizacion;
+  parentClienteId?: string | null;
+  parentNombreEmpresa?: string | null;
+  logoUrl?: string | null;
+  colorPrimario?: string | null;
+  colorSecundario?: string | null;
+}
+
+export interface CrearClienteBody {
+  nombre_empresa: string;
+  slug_url: string;
+  tipo: "partner" | "empresa";
+  parent_cliente_id?: string;
+}
+
+export interface ActualizarClienteBody {
+  nombre_empresa?: string;
+  slug_url?: string;
+  logo_url?: string | null;
+  color_primario?: string | null;
+  color_secundario?: string | null;
+}
+
+export interface AsignarPartnerBody {
+  parent_cliente_id: string;
 }
 
 export interface DashboardCliente {
