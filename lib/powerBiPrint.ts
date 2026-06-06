@@ -15,7 +15,7 @@ export async function applyPrintFriendlySettings(report: Report) {
       browserPrintAdjustmentsMode: models.BrowserPrintAdjustmentsMode.Default,
     },
     customLayout: {
-      displayOption: models.DisplayOption.FitToWidth,
+      displayOption: models.DisplayOption.FitToPage,
     },
   });
 }
